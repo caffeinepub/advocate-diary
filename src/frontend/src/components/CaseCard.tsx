@@ -4,6 +4,7 @@ import {
   Calendar,
   Hash,
   MapPin,
+  Pencil,
   Phone,
   Scale,
   Trash2,
@@ -17,6 +18,8 @@ interface CaseCardProps {
   legalCase: CaseWithId;
   index: number;
   onDelete: (id: bigint) => void;
+  onEdit: (legalCase: CaseWithId) => void;
+  onClick: (legalCase: CaseWithId) => void;
   isDeleting: boolean;
 }
 
@@ -70,6 +73,8 @@ export default function CaseCard({
   legalCase,
   index,
   onDelete,
+  onEdit,
+  onClick,
   isDeleting,
 }: CaseCardProps) {
   const { label: dateLabel, isUrgent } = getDateLabel(legalCase.nextDate);
@@ -85,25 +90,53 @@ export default function CaseCard({
       className="bg-card rounded-2xl shadow-card overflow-hidden border border-border"
     >
       {/* Periwinkle top strip */}
-      <div className="bg-periwinkle px-4 py-3 flex items-start justify-between gap-2">
+      <button
+        type="button"
+        className="bg-periwinkle px-4 py-3 flex items-start justify-between gap-2 cursor-pointer w-full text-left"
+        onClick={() => onClick(legalCase)}
+        aria-label={`View details for ${legalCase.title}`}
+      >
         <h3 className="font-semibold text-sm text-foreground leading-snug flex-1 line-clamp-2">
           {legalCase.title}
         </h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mt-0.5"
-          onClick={() => onDelete(legalCase.id)}
-          disabled={isDeleting}
-          data-ocid={`cases.delete_button.${markerIndex}`}
-          aria-label="Delete case"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
+        <div className="flex gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10 -mt-0.5"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(legalCase);
+            }}
+            data-ocid={`cases.edit_button.${markerIndex}`}
+            aria-label="Edit case"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mt-0.5"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(legalCase.id);
+            }}
+            disabled={isDeleting}
+            data-ocid={`cases.delete_button.${markerIndex}`}
+            aria-label="Delete case"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </button>
 
       {/* Card body */}
-      <div className="px-4 py-3 space-y-2">
+      <button
+        type="button"
+        className="px-4 py-3 space-y-2 cursor-pointer w-full text-left"
+        onClick={() => onClick(legalCase)}
+        aria-label={`Open case ${legalCase.refNumber}`}
+      >
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Hash className="h-3.5 w-3.5 shrink-0" />
           <span className="font-medium text-foreground">
@@ -177,7 +210,7 @@ export default function CaseCard({
             </div>
           </div>
         </div>
-      </div>
+      </button>
     </motion.div>
   );
 }

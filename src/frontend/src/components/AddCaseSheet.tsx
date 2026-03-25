@@ -12,33 +12,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import type { CaseWithId } from "../hooks/useQueries";
+
+export interface CaseFormData {
+  title: string;
+  refNumber: string;
+  underSection: string;
+  clientName: string;
+  clientAddress: string;
+  clientContact: string;
+  court: string;
+  status: string;
+  nextDate: bigint;
+  hearingReason: string;
+  partiesName: string;
+  remarks: string;
+}
 
 interface AddCaseSheetProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (data: {
-    title: string;
-    refNumber: string;
-    clientName: string;
-    clientAddress: string;
-    clientContact: string;
-    court: string;
-    status: string;
-    nextDate: bigint;
-    hearingReason: string;
-    partiesName: string;
-  }) => void;
+  onAdd: (data: CaseFormData) => void;
+  onEdit?: (data: CaseFormData) => void;
   isAdding: boolean;
+  initialData?: CaseWithId | null;
 }
 
 export default function AddCaseSheet({
   open,
   onClose,
   onAdd,
+  onEdit,
   isAdding,
+  initialData,
 }: AddCaseSheetProps) {
   const [title, setTitle] = useState("");
   const [refNumber, setRefNumber] = useState("");
+  const [underSection, setUnderSection] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientAddress, setClientAddress] = useState("");
   const [clientContact, setClientContact] = useState("");
@@ -47,14 +57,53 @@ export default function AddCaseSheet({
   const [nextDate, setNextDate] = useState("");
   const [hearingReason, setHearingReason] = useState("");
   const [partiesName, setPartiesName] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const titleRef = useRef<HTMLInputElement>(null);
 
+  const isEditMode = !!initialData;
+
   useEffect(() => {
     if (open) {
-      setTimeout(() => titleRef.current?.focus(), 300);
+      if (initialData) {
+        setTitle(initialData.title);
+        setRefNumber(initialData.refNumber);
+        setUnderSection(initialData.underSection || "");
+        setClientName(initialData.clientName);
+        setClientAddress(initialData.clientAddress);
+        setClientContact(initialData.clientContact);
+        setCourt(initialData.court);
+        setStatus(initialData.status);
+        const d = new Date(Number(initialData.nextDate));
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        setNextDate(`${yyyy}-${mm}-${dd}`);
+        setHearingReason(initialData.hearingReason);
+        setPartiesName(initialData.partiesName);
+        setRemarks(initialData.remarks || "");
+      } else {
+        resetForm();
+        setTimeout(() => titleRef.current?.focus(), 300);
+      }
     }
-  }, [open]);
+  }, [open, initialData]);
+
+  const resetForm = () => {
+    setTitle("");
+    setRefNumber("");
+    setUnderSection("");
+    setClientName("");
+    setClientAddress("");
+    setClientContact("");
+    setCourt("");
+    setStatus("Active");
+    setNextDate("");
+    setHearingReason("");
+    setPartiesName("");
+    setRemarks("");
+    setErrors({});
+  };
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -73,9 +122,10 @@ export default function AddCaseSheet({
       return;
     }
     const dateTs = BigInt(new Date(nextDate).getTime());
-    onAdd({
+    const data: CaseFormData = {
       title,
       refNumber,
+      underSection,
       clientName,
       clientAddress,
       clientContact,
@@ -84,21 +134,17 @@ export default function AddCaseSheet({
       nextDate: dateTs,
       hearingReason,
       partiesName,
-    });
+      remarks,
+    };
+    if (isEditMode && onEdit) {
+      onEdit(data);
+    } else {
+      onAdd(data);
+    }
   };
 
   const handleClose = () => {
-    setTitle("");
-    setRefNumber("");
-    setClientName("");
-    setClientAddress("");
-    setClientContact("");
-    setCourt("");
-    setStatus("Active");
-    setNextDate("");
-    setHearingReason("");
-    setPartiesName("");
-    setErrors({});
+    resetForm();
     onClose();
   };
 
@@ -135,7 +181,7 @@ export default function AddCaseSheet({
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-border">
               <h2 className="text-base font-semibold text-foreground">
-                Add New Case
+                {isEditMode ? "Edit Case" : "Add New Case"}
               </h2>
               <button
                 type="button"
@@ -203,6 +249,24 @@ export default function AddCaseSheet({
                 {errors.refNumber && (
                   <p className="text-xs text-destructive">{errors.refNumber}</p>
                 )}
+              </div>
+
+              {/* Under Section */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="under-section"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Under Section
+                </Label>
+                <Input
+                  id="under-section"
+                  value={underSection}
+                  onChange={(e) => setUnderSection(e.target.value)}
+                  placeholder="e.g. Section 302 IPC"
+                  className="h-12 text-sm"
+                  data-ocid="add_case.input"
+                />
               </div>
 
               {/* Parties Name */}
@@ -377,6 +441,25 @@ export default function AddCaseSheet({
                 />
               </div>
 
+              {/* Remarks */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="remarks"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Remarks
+                </Label>
+                <Textarea
+                  id="remarks"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="Any additional remarks or notes..."
+                  className="text-sm resize-none"
+                  style={{ minHeight: "80px" }}
+                  data-ocid="add_case.textarea"
+                />
+              </div>
+
               <Button
                 onClick={handleSubmit}
                 disabled={isAdding}
@@ -388,6 +471,8 @@ export default function AddCaseSheet({
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...
                   </>
+                ) : isEditMode ? (
+                  "Save Changes"
                 ) : (
                   "Add Case Entry"
                 )}

@@ -13,11 +13,19 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import AddCaseSheet from "./components/AddCaseSheet";
+import type { CaseFormData } from "./components/AddCaseSheet";
 import CaseCalendar from "./components/CaseCalendar";
 import CaseCard from "./components/CaseCard";
+import CaseDetailSheet from "./components/CaseDetailSheet";
 import LoginScreen from "./components/LoginScreen";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import { useAddCase, useDeleteCase, useGetMyCases } from "./hooks/useQueries";
+import {
+  useAddCase,
+  useDeleteCase,
+  useGetMyCases,
+  useUpdateCase,
+} from "./hooks/useQueries";
+import type { CaseWithId } from "./hooks/useQueries";
 
 function isTomorrow(dateMs: number): boolean {
   const tomorrow = new Date();
@@ -47,9 +55,12 @@ export default function App() {
   const { data: cases = [], isLoading } = useGetMyCases();
   const addCaseMutation = useAddCase();
   const deleteCaseMutation = useDeleteCase();
+  const updateCaseMutation = useUpdateCase();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [editCase, setEditCase] = useState<CaseWithId | null>(null);
+  const [detailCase, setDetailCase] = useState<CaseWithId | null>(null);
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(
     new Set(),
   );
@@ -105,22 +116,12 @@ export default function App() {
     sendNotifications();
   }, [cases, isLoggedIn]);
 
-  const handleAddCase = async (data: {
-    title: string;
-    refNumber: string;
-    clientName: string;
-    clientAddress: string;
-    clientContact: string;
-    court: string;
-    status: string;
-    nextDate: bigint;
-    hearingReason: string;
-    partiesName: string;
-  }) => {
+  const handleAddCase = async (data: CaseFormData) => {
     try {
       await addCaseMutation.mutateAsync({
         title: data.title,
         refNumber: data.refNumber,
+        underSection: data.underSection,
         clientName: data.clientName,
         clientAddress: data.clientAddress,
         clientContact: data.clientContact,
@@ -129,11 +130,40 @@ export default function App() {
         nextDate: data.nextDate,
         hearingReason: data.hearingReason,
         partiesName: data.partiesName,
+        remarks: data.remarks,
       });
       setSheetOpen(false);
       toast.success("Case added successfully");
     } catch {
       toast.error("Failed to add case. Please try again.");
+    }
+  };
+
+  const handleEditCase = async (data: CaseFormData) => {
+    if (!editCase) return;
+    try {
+      await updateCaseMutation.mutateAsync({
+        id: editCase.id,
+        legalCase: {
+          title: data.title,
+          refNumber: data.refNumber,
+          underSection: data.underSection,
+          clientName: data.clientName,
+          clientAddress: data.clientAddress,
+          clientContact: data.clientContact,
+          court: data.court,
+          status: data.status,
+          nextDate: data.nextDate,
+          hearingReason: data.hearingReason,
+          partiesName: data.partiesName,
+          remarks: data.remarks,
+        },
+      });
+      setEditCase(null);
+      setSheetOpen(false);
+      toast.success("Case updated successfully");
+    } catch {
+      toast.error("Failed to update case. Please try again.");
     }
   };
 
@@ -411,6 +441,11 @@ export default function App() {
                     legalCase={legalCase}
                     index={i}
                     onDelete={handleDeleteCase}
+                    onEdit={(c) => {
+                      setEditCase(c);
+                      setSheetOpen(true);
+                    }}
+                    onClick={(c) => setDetailCase(c)}
                     isDeleting={deleteCaseMutation.isPending}
                   />
                 ))}
@@ -427,7 +462,10 @@ export default function App() {
         type="button"
         whileTap={{ scale: 0.93 }}
         whileHover={{ scale: 1.05 }}
-        onClick={() => setSheetOpen(true)}
+        onClick={() => {
+          setEditCase(null);
+          setSheetOpen(true);
+        }}
         className="fixed bottom-6 right-4 w-14 h-14 rounded-full shadow-header flex items-center justify-center z-30"
         style={{ background: "oklch(var(--primary))" }}
         aria-label="Add new case"
@@ -436,12 +474,24 @@ export default function App() {
         <Plus className="w-6 h-6 text-white" />
       </motion.button>
 
-      {/* Add Case Sheet */}
+      {/* Add / Edit Case Sheet */}
       <AddCaseSheet
         open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
+        onClose={() => {
+          setSheetOpen(false);
+          setEditCase(null);
+        }}
         onAdd={handleAddCase}
-        isAdding={addCaseMutation.isPending}
+        onEdit={handleEditCase}
+        isAdding={addCaseMutation.isPending || updateCaseMutation.isPending}
+        initialData={editCase}
+      />
+
+      {/* Case Detail Sheet */}
+      <CaseDetailSheet
+        open={!!detailCase}
+        onClose={() => setDetailCase(null)}
+        legalCase={detailCase}
       />
 
       {/* Footer */}

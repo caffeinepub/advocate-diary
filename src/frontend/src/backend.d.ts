@@ -11,14 +11,20 @@ export type CaseId = bigint;
 export interface LegalCase {
     status: string;
     title: string;
+    refNumber: string;
+    underSection: string;
     clientName: string;
     clientAddress: string;
     clientContact: string;
     court: string;
-    refNumber: string;
     nextDate: bigint;
     hearingReason: string;
     partiesName: string;
+    remarks: string;
+}
+export interface CaseWithId {
+    id: CaseId;
+    legalCase: LegalCase;
 }
 export interface UserProfile {
     name: string;
@@ -33,6 +39,10 @@ export interface backendInterface {
      * / Create a new legal case.
      */
     addCase(legalCase: LegalCase): Promise<CaseId>;
+    /**
+     * / Update an existing case.
+     */
+    updateCase(caseId: CaseId, legalCase: LegalCase): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     /**
      * / Delete a case by id (only if created by caller).
@@ -41,9 +51,13 @@ export interface backendInterface {
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     /**
-     * / Get all cases for the caller.
+     * / Get all cases for the caller (without IDs).
      */
     getMyCases(): Promise<Array<LegalCase>>;
+    /**
+     * / Get all cases for the caller with their IDs.
+     */
+    getMyCasesWithId(): Promise<Array<CaseWithId>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;

@@ -30,8 +30,8 @@ actor {
     legalCase : LegalCaseLegacy;
   };
 
-  // ── Current types ────────────────────────────────────────────────────────
-  type LegalCase = {
+  // ── V2 types (previous schema) ────────────────────────────────────────────
+  type LegalCaseV2 = {
     title : Text;
     refNumber : Text;
     clientName : Text;
@@ -42,6 +42,28 @@ actor {
     nextDate : Nat;
     hearingReason : Text;
     partiesName : Text;
+  };
+
+  type CaseEntryV2 = {
+    createdBy : Principal;
+    createdOn : Nat;
+    legalCase : LegalCaseV2;
+  };
+
+  // ── Current types ────────────────────────────────────────────────────────
+  type LegalCase = {
+    title : Text;
+    refNumber : Text;
+    underSection : Text;
+    clientName : Text;
+    clientAddress : Text;
+    clientContact : Text;
+    court : Text;
+    status : Text;
+    nextDate : Nat;
+    hearingReason : Text;
+    partiesName : Text;
+    remarks : Text;
   };
 
   module LegalCase {
@@ -56,28 +78,33 @@ actor {
     legalCase : LegalCase;
   };
 
+  type CaseWithId = {
+    id : CaseId;
+    legalCase : LegalCase;
+  };
+
   public type UserProfile = {
     name : Text;
   };
 
   // ── Stable storage ───────────────────────────────────────────────────────
-  // Keeps the OLD name + type so Motoko can deserialise existing stable memory.
   let cases = Map.empty<CaseId, CaseEntryLegacy>();
-
-  // New store for the updated schema.
-  let casesV2 = Map.empty<CaseId, CaseEntry>();
+  let casesV2 = Map.empty<CaseId, CaseEntryV2>();
+  let casesV3 = Map.empty<CaseId, CaseEntry>();
 
   var nextCaseId = 0;
   var migrationDone = false;
+  var migrationV2Done = false;
 
   let userProfiles = Map.empty<Principal, UserProfile>();
 
   // ── One-time migration ───────────────────────────────────────────────────
   system func postupgrade() {
+    // Migration 1: legacy -> v2
     if (not migrationDone) {
       var migratedId : Nat = 0;
       for (entry in cases.values()) {
-        let newEntry : CaseEntry = {
+        let newEntry : CaseEntryV2 = {
           createdBy = entry.createdBy;
           createdOn = entry.createdOn;
           legalCase = {
@@ -100,6 +127,37 @@ actor {
         nextCaseId := migratedId;
       };
       migrationDone := true;
+    };
+
+    // Migration 2: v2 -> v3 (add underSection and remarks)
+    if (not migrationV2Done) {
+      var maxId : Nat = 0;
+      for ((id, entry) in casesV2.entries()) {
+        let newEntry : CaseEntry = {
+          createdBy = entry.createdBy;
+          createdOn = entry.createdOn;
+          legalCase = {
+            title = entry.legalCase.title;
+            refNumber = entry.legalCase.refNumber;
+            underSection = "";
+            clientName = entry.legalCase.clientName;
+            clientAddress = entry.legalCase.clientAddress;
+            clientContact = entry.legalCase.clientContact;
+            court = entry.legalCase.court;
+            status = entry.legalCase.status;
+            nextDate = entry.legalCase.nextDate;
+            hearingReason = entry.legalCase.hearingReason;
+            partiesName = entry.legalCase.partiesName;
+            remarks = "";
+          };
+        };
+        casesV3.add(id, newEntry);
+        if (id >= maxId) { maxId := id + 1 };
+      };
+      if (maxId > nextCaseId) {
+        nextCaseId := maxId;
+      };
+      migrationV2Done := true;
     };
   };
 
@@ -151,16 +209,32 @@ actor {
       legalCase;
     };
 
-    casesV2.add(id, entry);
+    casesV3.add(id, entry);
     id;
   };
 
-  /// Get all cases for the caller.
+  /// Update an existing case.
+  public shared ({ caller }) func updateCase(caseId : CaseId, legalCase : LegalCase) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update cases");
+    };
+    validateLegalCase(legalCase);
+    let entry = switch (casesV3.get(caseId)) {
+      case (null) { Runtime.trap("Case not found") };
+      case (?entry) { entry };
+    };
+    if (entry.createdBy != caller) {
+      Runtime.trap("Cannot update case you did not create");
+    };
+    casesV3.add(caseId, { entry with legalCase });
+  };
+
+  /// Get all cases for the caller (without IDs).
   public query ({ caller }) func getMyCases() : async [LegalCase] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view cases");
     };
-    casesV2.values().toArray().filter(
+    casesV3.values().toArray().filter(
       func(entry) {
         entry.createdBy == caller;
       }
@@ -171,18 +245,38 @@ actor {
     ).sort();
   };
 
+  /// Get all cases for the caller with their IDs.
+  public query ({ caller }) func getMyCasesWithId() : async [CaseWithId] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cases");
+    };
+    casesV3.entries().toArray().filter(
+      func((_, entry)) {
+        entry.createdBy == caller;
+      }
+    ).map(
+      func((id, entry)) {
+        { id; legalCase = entry.legalCase };
+      }
+    ).sort(
+      func(a, b) {
+        LegalCase.compare(a.legalCase, b.legalCase);
+      }
+    );
+  };
+
   /// Delete a case by id (only if created by caller).
   public shared ({ caller }) func deleteCase(caseId : CaseId) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can delete cases");
     };
-    let entry = switch (casesV2.get(caseId)) {
+    let entry = switch (casesV3.get(caseId)) {
       case (null) { Runtime.trap("Case not found") };
       case (?entry) { entry };
     };
     if (entry.createdBy != caller) {
       Runtime.trap("Cannot delete case you did not create");
     };
-    casesV2.remove(caseId);
+    casesV3.remove(caseId);
   };
 };
