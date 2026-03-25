@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -19,9 +20,13 @@ interface AddCaseSheetProps {
     title: string;
     refNumber: string;
     clientName: string;
+    clientAddress: string;
+    clientContact: string;
     court: string;
     status: string;
     nextDate: bigint;
+    hearingReason: string;
+    partiesName: string;
   }) => void;
   isAdding: boolean;
 }
@@ -35,9 +40,13 @@ export default function AddCaseSheet({
   const [title, setTitle] = useState("");
   const [refNumber, setRefNumber] = useState("");
   const [clientName, setClientName] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+  const [clientContact, setClientContact] = useState("");
   const [court, setCourt] = useState("");
   const [status, setStatus] = useState("Active");
   const [nextDate, setNextDate] = useState("");
+  const [hearingReason, setHearingReason] = useState("");
+  const [partiesName, setPartiesName] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -64,16 +73,31 @@ export default function AddCaseSheet({
       return;
     }
     const dateTs = BigInt(new Date(nextDate).getTime());
-    onAdd({ title, refNumber, clientName, court, status, nextDate: dateTs });
+    onAdd({
+      title,
+      refNumber,
+      clientName,
+      clientAddress,
+      clientContact,
+      court,
+      status,
+      nextDate: dateTs,
+      hearingReason,
+      partiesName,
+    });
   };
 
   const handleClose = () => {
     setTitle("");
     setRefNumber("");
     setClientName("");
+    setClientAddress("");
+    setClientContact("");
     setCourt("");
     setStatus("Active");
     setNextDate("");
+    setHearingReason("");
+    setPartiesName("");
     setErrors({});
     onClose();
   };
@@ -126,6 +150,7 @@ export default function AddCaseSheet({
 
             {/* Form */}
             <div className="px-5 py-4 space-y-4 pb-8">
+              {/* Case Title */}
               <div className="space-y-1.5">
                 <Label
                   htmlFor="case-title"
@@ -155,6 +180,7 @@ export default function AddCaseSheet({
                 )}
               </div>
 
+              {/* CNR */}
               <div className="space-y-1.5">
                 <Label
                   htmlFor="case-ref"
@@ -179,6 +205,28 @@ export default function AddCaseSheet({
                 )}
               </div>
 
+              {/* Parties Name */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="parties-name"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Parties Name
+                </Label>
+                <Input
+                  id="parties-name"
+                  value={partiesName}
+                  onChange={(e) => setPartiesName(e.target.value)}
+                  placeholder="e.g. Plaintiff / Defendant"
+                  className="h-12 text-sm"
+                  data-ocid="add_case.input"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Plaintiff, Defendant, Complainant, Accused, etc.
+                </p>
+              </div>
+
+              {/* Client Name */}
               <div className="space-y-1.5">
                 <Label
                   htmlFor="client-name"
@@ -205,6 +253,44 @@ export default function AddCaseSheet({
                 )}
               </div>
 
+              {/* Client Address */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="client-address"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Client Address
+                </Label>
+                <Textarea
+                  id="client-address"
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                  placeholder="Client's full address"
+                  className="text-sm min-h-[80px] resize-none"
+                  data-ocid="add_case.textarea"
+                />
+              </div>
+
+              {/* Client Contact */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="client-contact"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Contact Number
+                </Label>
+                <Input
+                  id="client-contact"
+                  type="tel"
+                  value={clientContact}
+                  onChange={(e) => setClientContact(e.target.value)}
+                  placeholder="e.g. +91 98765 43210"
+                  className="h-12 text-sm"
+                  data-ocid="add_case.input"
+                />
+              </div>
+
+              {/* Court */}
               <div className="space-y-1.5">
                 <Label
                   htmlFor="court-forum"
@@ -228,6 +314,7 @@ export default function AddCaseSheet({
                 )}
               </div>
 
+              {/* Status */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
@@ -247,6 +334,7 @@ export default function AddCaseSheet({
                 </Select>
               </div>
 
+              {/* Next Court Date */}
               <div className="space-y-1.5">
                 <Label
                   htmlFor="next-date"
@@ -269,6 +357,24 @@ export default function AddCaseSheet({
                 {errors.nextDate && (
                   <p className="text-xs text-destructive">{errors.nextDate}</p>
                 )}
+              </div>
+
+              {/* Reason of Hearing */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="hearing-reason"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Reason of Hearing
+                </Label>
+                <Input
+                  id="hearing-reason"
+                  value={hearingReason}
+                  onChange={(e) => setHearingReason(e.target.value)}
+                  placeholder="e.g. Arguments on evidence"
+                  className="h-12 text-sm"
+                  data-ocid="add_case.input"
+                />
               </div>
 
               <Button

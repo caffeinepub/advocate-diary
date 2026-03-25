@@ -1,28 +1,33 @@
 # Advocate Diary
 
 ## Current State
-App uses Internet Identity (blockchain) for authentication. After login, users can manage legal cases. LoginScreen shows a single "Login to Continue" button that triggers Internet Identity.
+App has a 3-step login flow (Internet Identity → Sign Up → Login), a case dashboard with case cards, and an add-case form with fields: title, CNR, client name, court, status, next date.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Sign Up page: form with Login ID (username) and Password fields, confirm password field, submit button
-- Login page update: form with Login ID and Password fields instead of just Internet Identity button
-- Backend: store user credentials (loginId + hashed password) per principal
-- Backend: `signUp(loginId, password)` - registers credentials for current principal
-- Backend: `verifyCredentials(loginId, password)` - verifies login ID and password match the principal
-- Backend: `hasCredentials()` - checks if current principal has set up credentials
+- Monthly calendar on home page showing next hearing dates highlighted in red
+- `hearingReason` field (text) on add-case form after Next Court Date
+- `partiesName` field (plaintiff/defendant/complainant/accused) on add-case form
+- `clientAddress` field on add-case form
+- `clientContact` field (phone number) on add-case form
 
 ### Modify
-- LoginScreen: replace single button with a tabbed interface (Login / Sign Up) with login ID + password fields
-- App.tsx: after Internet Identity auth, check if user has credentials; if not, show signup; if yes, show credential login form
+- Login flow: remove the "Login to Continue" (Internet Identity button) first step; auto-trigger II on mount so user only sees username/password form
+- Backend `LegalCase` type: add `hearingReason`, `partiesName`, `clientAddress`, `clientContact` fields
+- `AddCaseSheet`: add 4 new fields
+- `CaseCard`: display partiesName and hearingReason
+- `App.tsx`: add calendar section, update handleAddCase signature
 
 ### Remove
-- Nothing removed
+- The `ii-pending` screen with the "Login to Continue" button (replaced by auto-trigger + loading state)
 
 ## Implementation Plan
-1. Update backend (main.mo) to add credential storage and verification functions
-2. Update backend.d.ts with new function signatures
-3. Create SignupPage component with login ID, password, confirm password fields
-4. Update LoginScreen to show login ID + password form after Internet Identity auth
-5. Update App.tsx to handle the two-step auth flow (II auth -> credential check -> signup or login)
+1. Update `main.mo` - add new fields to LegalCase
+2. Update `backend.d.ts`, `backend.did.d.ts`, `backend.did.js` - reflect new fields
+3. Update `useQueries.ts` - add new fields to CaseWithId
+4. Update `LoginScreen.tsx` - auto-trigger onLogin, remove button step
+5. Update `AddCaseSheet.tsx` - add 4 new fields
+6. Update `CaseCard.tsx` - show new fields
+7. Create `CaseCalendar.tsx` - monthly calendar with red highlighting
+8. Update `App.tsx` - embed calendar, update handleAddCase

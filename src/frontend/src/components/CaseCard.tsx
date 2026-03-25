@@ -1,6 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Hash, Scale, Trash2, User } from "lucide-react";
+import {
+  Calendar,
+  Hash,
+  MapPin,
+  Phone,
+  Scale,
+  Trash2,
+  User,
+  Users,
+} from "lucide-react";
 import { motion } from "motion/react";
 import type { CaseWithId } from "../hooks/useQueries";
 
@@ -94,7 +103,7 @@ export default function CaseCard({
       </div>
 
       {/* Card body */}
-      <div className="px-4 py-3 space-y-2.5">
+      <div className="px-4 py-3 space-y-2">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Hash className="h-3.5 w-3.5 shrink-0" />
           <span className="font-medium text-foreground">
@@ -102,15 +111,43 @@ export default function CaseCard({
           </span>
         </div>
 
+        {legalCase.partiesName && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5 shrink-0" />
+            <span>{legalCase.partiesName}</span>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <User className="h-3.5 w-3.5 shrink-0" />
           <span>{legalCase.clientName}</span>
         </div>
 
+        {legalCase.clientContact && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Phone className="h-3.5 w-3.5 shrink-0" />
+            <span>{legalCase.clientContact}</span>
+          </div>
+        )}
+
+        {legalCase.clientAddress && (
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span className="line-clamp-2">{legalCase.clientAddress}</span>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Scale className="h-3.5 w-3.5 shrink-0" />
           <span>{legalCase.court}</span>
         </div>
+
+        {legalCase.hearingReason && (
+          <div className="text-xs bg-muted/60 rounded-lg px-3 py-2">
+            <span className="text-muted-foreground font-medium">Reason: </span>
+            <span className="text-foreground">{legalCase.hearingReason}</span>
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-1">
           <Badge

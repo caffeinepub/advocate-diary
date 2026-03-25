@@ -15,9 +15,13 @@ export interface LegalCase {
   'status' : string,
   'title' : string,
   'clientName' : string,
+  'clientAddress' : string,
+  'clientContact' : string,
   'court' : string,
   'refNumber' : string,
   'nextDate' : bigint,
+  'hearingReason' : string,
+  'partiesName' : string,
 }
 export interface UserProfile { 'name' : string }
 export type UserRole = { 'admin' : null } |

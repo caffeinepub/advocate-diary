@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Loader2, Scale, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2, Scale } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 
@@ -40,7 +40,7 @@ function clearCreds(principal: string) {
   localStorage.removeItem(getCredsKey(principal));
 }
 
-type Screen = "ii-pending" | "signup" | "login";
+type Screen = "connecting" | "signup" | "login";
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -57,7 +57,8 @@ export default function LoginScreen({
   principalString,
   onCredentialsVerified,
 }: LoginScreenProps) {
-  const [screen, setScreen] = useState<Screen>("ii-pending");
+  const [screen, setScreen] = useState<Screen>("connecting");
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
 
   // Sign Up state
   const [signupId, setSignupId] = useState("");
@@ -74,6 +75,14 @@ export default function LoginScreen({
   const [showLoginPass, setShowLoginPass] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+
+  // Auto-trigger Internet Identity on mount
+  useEffect(() => {
+    if (!autoLoginAttempted && !identity) {
+      setAutoLoginAttempted(true);
+      onLogin();
+    }
+  }, [autoLoginAttempted, identity, onLogin]);
 
   // When identity resolves, determine screen
   useEffect(() => {
@@ -147,6 +156,10 @@ export default function LoginScreen({
     setScreen("signup");
   };
 
+  const handleRetry = () => {
+    setAutoLoginAttempted(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top indigo hero */}
@@ -178,51 +191,40 @@ export default function LoginScreen({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
         className="bg-card rounded-t-3xl px-6 py-8 shadow-header"
-        style={{ minHeight: "320px" }}
+        style={{ minHeight: "280px" }}
       >
         <AnimatePresence mode="wait">
-          {/* II Pending — show connect button */}
-          {screen === "ii-pending" && (
+          {/* Connecting state */}
+          {screen === "connecting" && (
             <motion.div
-              key="ii-pending"
+              key="connecting"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
+              className="flex flex-col items-center justify-center py-8 gap-4"
             >
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                    <ShieldCheck className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-foreground">
-                      Secure &amp; Private
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Your data is stored on the blockchain
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground text-center mb-4">
-                Sign in to manage your cases
-              </p>
-              <Button
-                onClick={onLogin}
-                disabled={isLoggingIn}
-                className="w-full h-14 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl shadow-card"
-                data-ocid="login.primary_button"
-              >
-                {isLoggingIn ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Connecting...
-                  </span>
-                ) : (
-                  "Login to Continue"
-                )}
-              </Button>
+              {isLoggingIn ? (
+                <>
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">
+                    Connecting securely...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Authentication window was closed. Please try again.
+                  </p>
+                  <Button
+                    onClick={handleRetry}
+                    className="h-12 px-6 rounded-2xl"
+                    data-ocid="login.primary_button"
+                  >
+                    Try Again
+                  </Button>
+                </>
+              )}
             </motion.div>
           )}
 
@@ -245,7 +247,6 @@ export default function LoginScreen({
                 </p>
               </div>
 
-              {/* Login ID */}
               <div className="space-y-1.5">
                 <Label htmlFor="signup-id" className="text-sm font-medium">
                   Login ID
@@ -271,7 +272,6 @@ export default function LoginScreen({
                 )}
               </div>
 
-              {/* Password */}
               <div className="space-y-1.5">
                 <Label htmlFor="signup-pass" className="text-sm font-medium">
                   Password
@@ -315,7 +315,6 @@ export default function LoginScreen({
                 )}
               </div>
 
-              {/* Confirm Password */}
               <div className="space-y-1.5">
                 <Label htmlFor="signup-confirm" className="text-sm font-medium">
                   Confirm Password
@@ -337,11 +336,7 @@ export default function LoginScreen({
                     type="button"
                     onClick={() => setShowSignupConfirm((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={
-                      showSignupConfirm
-                        ? "Hide confirm password"
-                        : "Show confirm password"
-                    }
+                    aria-label={showSignupConfirm ? "Hide" : "Show"}
                     data-ocid="signup.toggle"
                   >
                     {showSignupConfirm ? (
@@ -398,7 +393,6 @@ export default function LoginScreen({
                 </p>
               </div>
 
-              {/* Login ID */}
               <div className="space-y-1.5">
                 <Label htmlFor="login-id" className="text-sm font-medium">
                   Login ID
@@ -413,7 +407,6 @@ export default function LoginScreen({
                 />
               </div>
 
-              {/* Password */}
               <div className="space-y-1.5">
                 <Label htmlFor="login-pass" className="text-sm font-medium">
                   Password

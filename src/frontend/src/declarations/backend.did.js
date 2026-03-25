@@ -12,9 +12,13 @@ export const LegalCase = IDL.Record({
   'status' : IDL.Text,
   'title' : IDL.Text,
   'clientName' : IDL.Text,
+  'clientAddress' : IDL.Text,
+  'clientContact' : IDL.Text,
   'court' : IDL.Text,
   'refNumber' : IDL.Text,
   'nextDate' : IDL.Nat,
+  'hearingReason' : IDL.Text,
+  'partiesName' : IDL.Text,
 });
 export const CaseId = IDL.Nat;
 export const UserRole = IDL.Variant({
@@ -48,9 +52,13 @@ export const idlFactory = ({ IDL }) => {
     'status' : IDL.Text,
     'title' : IDL.Text,
     'clientName' : IDL.Text,
+    'clientAddress' : IDL.Text,
+    'clientContact' : IDL.Text,
     'court' : IDL.Text,
     'refNumber' : IDL.Text,
     'nextDate' : IDL.Nat,
+    'hearingReason' : IDL.Text,
+    'partiesName' : IDL.Text,
   });
   const CaseId = IDL.Nat;
   const UserRole = IDL.Variant({

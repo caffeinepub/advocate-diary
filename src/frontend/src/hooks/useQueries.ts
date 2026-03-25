@@ -7,9 +7,13 @@ export interface CaseWithId {
   title: string;
   refNumber: string;
   clientName: string;
+  clientAddress: string;
+  clientContact: string;
   court: string;
   status: string;
   nextDate: bigint;
+  hearingReason: string;
+  partiesName: string;
 }
 
 export function useGetMyCases() {
