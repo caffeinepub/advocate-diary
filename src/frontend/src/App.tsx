@@ -1,13 +1,24 @@
 import { Toaster } from "@/components/ui/sonner";
-import { Briefcase, LogOut, Plus, Scale, Search } from "lucide-react";
+import { Briefcase, LogOut, Plus, Scale, Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import AddCaseSheet from "./components/AddCaseSheet";
 import CaseCard from "./components/CaseCard";
 import LoginScreen from "./components/LoginScreen";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useAddCase, useDeleteCase, useGetMyCases } from "./hooks/useQueries";
+
+function isTomorrow(dateMs: number): boolean {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const d = new Date(dateMs);
+  return (
+    d.getFullYear() === tomorrow.getFullYear() &&
+    d.getMonth() === tomorrow.getMonth() &&
+    d.getDate() === tomorrow.getDate()
+  );
+}
 
 export default function App() {
   const { login, clear, loginStatus, identity, isInitializing } =
@@ -21,6 +32,10 @@ export default function App() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(
+    new Set(),
+  );
+  const notifiedIds = useRef<Set<string>>(new Set());
 
   const filteredCases = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -38,6 +53,41 @@ export default function App() {
     const principal = identity.getPrincipal().toString();
     return principal.slice(0, 2).toUpperCase();
   }, [identity]);
+
+  // Tomorrow cases for banners
+  const tomorrowCases = useMemo(
+    () => cases.filter((c) => isTomorrow(Number(c.nextDate))),
+    [cases],
+  );
+
+  // Browser notification + permission
+  useEffect(() => {
+    if (!isLoggedIn || cases.length === 0) return;
+
+    const sendNotifications = async () => {
+      if (!("Notification" in window)) return;
+
+      if (Notification.permission === "default") {
+        await Notification.requestPermission();
+      }
+
+      if (Notification.permission !== "granted") return;
+
+      for (const c of cases) {
+        const key = `${c.refNumber}-${String(c.nextDate)}`;
+        if (notifiedIds.current.has(key)) continue;
+        if (!isTomorrow(Number(c.nextDate))) continue;
+
+        notifiedIds.current.add(key);
+        new Notification("Hearing Tomorrow", {
+          body: `${c.title} — ${c.court} hearing is scheduled for tomorrow`,
+          icon: "/favicon.ico",
+        });
+      }
+    };
+
+    sendNotifications();
+  }, [cases, isLoggedIn]);
 
   const handleAddCase = async (data: {
     title: string;
@@ -72,6 +122,10 @@ export default function App() {
     }
   };
 
+  const dismissBanner = (key: string) => {
+    setDismissedBanners((prev) => new Set([...prev, key]));
+  };
+
   if (isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -96,6 +150,10 @@ export default function App() {
       </>
     );
   }
+
+  const visibleBanners = tomorrowCases.filter(
+    (c) => !dismissedBanners.has(c.refNumber),
+  );
 
   return (
     <div
@@ -183,6 +241,48 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Reminder Banners */}
+      <AnimatePresence>
+        {visibleBanners.map((c) => {
+          const dateStr = new Date(Number(c.nextDate)).toLocaleDateString(
+            "en-IN",
+            {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            },
+          );
+          return (
+            <motion.div
+              key={c.refNumber}
+              initial={{ opacity: 0, y: -8, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{ opacity: 0, y: -8, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="px-4 pt-2"
+              data-ocid="reminder.panel"
+            >
+              <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-300 rounded-xl px-3 py-2.5">
+                <span className="text-base leading-none mt-0.5">🔔</span>
+                <p className="flex-1 text-xs text-amber-900 leading-snug">
+                  <span className="font-semibold">Reminder:</span> {c.title}{" "}
+                  hearing is tomorrow ({dateStr})
+                </p>
+                <button
+                  type="button"
+                  onClick={() => dismissBanner(c.refNumber)}
+                  className="shrink-0 text-amber-600 hover:text-amber-900 transition-colors"
+                  aria-label="Dismiss reminder"
+                  data-ocid="reminder.close_button"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
 
       {/* Main content */}
       <main className="flex-1 px-4 py-4" data-ocid="cases.list">
