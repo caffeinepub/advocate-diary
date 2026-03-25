@@ -65,6 +65,7 @@ export default function App() {
     new Set(),
   );
   const notifiedIds = useRef<Set<string>>(new Set());
+  const notifTimeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const filteredCases = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -100,20 +101,37 @@ export default function App() {
 
       if (Notification.permission !== "granted") return;
 
+      const now = new Date();
+      const eightPM = new Date(now);
+      eightPM.setHours(20, 0, 0, 0);
+      const msUntil8PM = eightPM.getTime() - now.getTime();
+      const delay = msUntil8PM > 0 ? msUntil8PM : 0;
+
       for (const c of cases) {
         const key = `${c.refNumber}-${String(c.nextDate)}`;
         if (notifiedIds.current.has(key)) continue;
         if (!isTomorrow(Number(c.nextDate))) continue;
 
         notifiedIds.current.add(key);
-        new Notification("Hearing Tomorrow", {
-          body: `${c.title} — ${c.court} hearing is scheduled for tomorrow`,
-          icon: "/favicon.ico",
-        });
+
+        const t = setTimeout(() => {
+          new Notification("Hearing Tomorrow", {
+            body: `${c.title} — ${c.court} hearing is scheduled for tomorrow`,
+            icon: "/favicon.ico",
+          });
+        }, delay);
+        notifTimeouts.current.push(t);
       }
     };
 
     sendNotifications();
+
+    return () => {
+      for (const t of notifTimeouts.current) {
+        clearTimeout(t);
+      }
+      notifTimeouts.current = [];
+    };
   }, [cases, isLoggedIn]);
 
   const handleAddCase = async (data: CaseFormData) => {
@@ -134,8 +152,9 @@ export default function App() {
       });
       setSheetOpen(false);
       toast.success("Case added successfully");
-    } catch {
-      toast.error("Failed to add case. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Failed to add case: ${msg}`);
     }
   };
 
@@ -162,8 +181,9 @@ export default function App() {
       setEditCase(null);
       setSheetOpen(false);
       toast.success("Case updated successfully");
-    } catch {
-      toast.error("Failed to update case. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Failed to update case: ${msg}`);
     }
   };
 

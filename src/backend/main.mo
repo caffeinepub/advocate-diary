@@ -88,15 +88,15 @@ actor {
   };
 
   // ── Stable storage ───────────────────────────────────────────────────────
-  let cases = Map.empty<CaseId, CaseEntryLegacy>();
-  let casesV2 = Map.empty<CaseId, CaseEntryV2>();
-  let casesV3 = Map.empty<CaseId, CaseEntry>();
+  stable var cases = Map.empty<CaseId, CaseEntryLegacy>();
+  stable var casesV2 = Map.empty<CaseId, CaseEntryV2>();
+  stable var casesV3 = Map.empty<CaseId, CaseEntry>();
 
-  var nextCaseId = 0;
-  var migrationDone = false;
-  var migrationV2Done = false;
+  stable var nextCaseId = 0;
+  stable var migrationDone = false;
+  stable var migrationV2Done = false;
 
-  let userProfiles = Map.empty<Principal, UserProfile>();
+  stable var userProfiles = Map.empty<Principal, UserProfile>();
 
   // ── One-time migration ───────────────────────────────────────────────────
   system func postupgrade() {

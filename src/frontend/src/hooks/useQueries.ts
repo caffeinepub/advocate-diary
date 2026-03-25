@@ -43,6 +43,7 @@ export function useGetMyCases() {
       }));
     },
     enabled: !!actor && !isFetching,
+    retry: 2,
   });
 }
 
@@ -52,7 +53,8 @@ export function useAddCase() {
   return useMutation({
     mutationFn: async (legalCase: LegalCase) => {
       if (!actor) throw new Error("Not connected");
-      return actor.addCase(legalCase);
+      const result = await actor.addCase(legalCase);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myCases"] });

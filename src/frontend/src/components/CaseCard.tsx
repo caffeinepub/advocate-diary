@@ -1,3 +1,14 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -113,20 +124,46 @@ export default function CaseCard({
           >
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mt-0.5"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(legalCase.id);
-            }}
-            disabled={isDeleting}
-            data-ocid={`cases.delete_button.${markerIndex}`}
-            aria-label="Delete case"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mt-0.5"
+                onClick={(e) => e.stopPropagation()}
+                disabled={isDeleting}
+                data-ocid={`cases.delete_button.${markerIndex}`}
+                aria-label="Delete case"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this case?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove{" "}
+                  <strong>{legalCase.title}</strong> from your diary. This
+                  action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  data-ocid={`cases.cancel_button.${markerIndex}`}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(legalCase.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  data-ocid={`cases.confirm_button.${markerIndex}`}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </button>
 
