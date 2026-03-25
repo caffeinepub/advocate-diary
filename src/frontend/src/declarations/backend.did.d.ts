@@ -14,6 +14,7 @@ export type CaseId = bigint;
 export interface LegalCase {
   'status' : string,
   'title' : string,
+  'underSection' : string,
   'clientName' : string,
   'clientAddress' : string,
   'clientContact' : string,
@@ -22,6 +23,11 @@ export interface LegalCase {
   'nextDate' : bigint,
   'hearingReason' : string,
   'partiesName' : string,
+  'remarks' : string,
+}
+export interface CaseWithId {
+  'id' : bigint,
+  'legalCase' : LegalCase,
 }
 export interface UserProfile { 'name' : string }
 export type UserRole = { 'admin' : null } |
@@ -33,6 +39,10 @@ export interface _SERVICE {
    * / Create a new legal case.
    */
   'addCase' : ActorMethod<[LegalCase], CaseId>,
+  /**
+   * / Update an existing case.
+   */
+  'updateCase' : ActorMethod<[bigint, LegalCase], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   /**
    * / Delete a case by id (only if created by caller).
@@ -44,6 +54,10 @@ export interface _SERVICE {
    * / Get all cases for the caller.
    */
   'getMyCases' : ActorMethod<[], Array<LegalCase>>,
+  /**
+   * / Get all cases for the caller with their IDs.
+   */
+  'getMyCasesWithId' : ActorMethod<[], Array<CaseWithId>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,

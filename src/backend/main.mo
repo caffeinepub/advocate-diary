@@ -161,6 +161,26 @@ actor {
     };
   };
 
+  // ── Auto-register helper ─────────────────────────────────────────────────
+  // Ensures any non-anonymous caller is registered as a user automatically.
+  // This prevents "User is not registered" traps for legitimate callers.
+  func ensureRegistered(caller : Principal) {
+    if (caller.isAnonymous()) { return };
+    switch (accessControlState.userRoles.get(caller)) {
+      case (null) {
+        accessControlState.userRoles.add(caller, #user);
+      };
+      case (_) {};
+    };
+  };
+
+  func requireUser(caller : Principal) {
+    if (caller.isAnonymous()) {
+      Runtime.trap("Anonymous callers cannot perform this action");
+    };
+    ensureRegistered(caller);
+  };
+
   // ── Validation ───────────────────────────────────────────────────────────
   func validateLegalCase(legalCase : LegalCase) {
     if (legalCase.title == "") { Runtime.trap("Title cannot be empty") };
@@ -172,9 +192,6 @@ actor {
 
   // ── User profile functions ───────────────────────────────────────────────
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
-    };
     userProfiles.get(caller);
   };
 
@@ -186,18 +203,14 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
+    requireUser(caller);
     userProfiles.add(caller, profile);
   };
 
   // ── Case functions ───────────────────────────────────────────────────────
   /// Create a new legal case.
   public shared ({ caller }) func addCase(legalCase : LegalCase) : async CaseId {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add cases");
-    };
+    requireUser(caller);
     validateLegalCase(legalCase);
 
     let id = nextCaseId;
@@ -215,9 +228,7 @@ actor {
 
   /// Update an existing case.
   public shared ({ caller }) func updateCase(caseId : CaseId, legalCase : LegalCase) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update cases");
-    };
+    requireUser(caller);
     validateLegalCase(legalCase);
     let entry = switch (casesV3.get(caseId)) {
       case (null) { Runtime.trap("Case not found") };
@@ -231,9 +242,6 @@ actor {
 
   /// Get all cases for the caller (without IDs).
   public query ({ caller }) func getMyCases() : async [LegalCase] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cases");
-    };
     casesV3.values().toArray().filter(
       func(entry) {
         entry.createdBy == caller;
@@ -247,9 +255,6 @@ actor {
 
   /// Get all cases for the caller with their IDs.
   public query ({ caller }) func getMyCasesWithId() : async [CaseWithId] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cases");
-    };
     casesV3.entries().toArray().filter(
       func((_, entry)) {
         entry.createdBy == caller;
@@ -267,9 +272,7 @@ actor {
 
   /// Delete a case by id (only if created by caller).
   public shared ({ caller }) func deleteCase(caseId : CaseId) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can delete cases");
-    };
+    requireUser(caller);
     let entry = switch (casesV3.get(caseId)) {
       case (null) { Runtime.trap("Case not found") };
       case (?entry) { entry };

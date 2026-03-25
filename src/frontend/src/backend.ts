@@ -93,6 +93,7 @@ export type CaseId = bigint;
 export interface LegalCase {
     status: string;
     title: string;
+    underSection: string;
     clientName: string;
     clientAddress: string;
     clientContact: string;
@@ -101,6 +102,11 @@ export interface LegalCase {
     nextDate: bigint;
     hearingReason: string;
     partiesName: string;
+    remarks: string;
+}
+export interface CaseWithId {
+    id: bigint;
+    legalCase: LegalCase;
 }
 export interface UserProfile {
     name: string;
@@ -116,6 +122,10 @@ export interface backendInterface {
      * / Create a new legal case.
      */
     addCase(legalCase: LegalCase): Promise<CaseId>;
+    /**
+     * / Update an existing case.
+     */
+    updateCase(caseId: CaseId, legalCase: LegalCase): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     /**
      * / Delete a case by id (only if created by caller).
@@ -127,11 +137,15 @@ export interface backendInterface {
      * / Get all cases for the caller.
      */
     getMyCases(): Promise<Array<LegalCase>>;
+    /**
+     * / Get all cases for the caller with their IDs.
+     */
+    getMyCasesWithId(): Promise<Array<CaseWithId>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
 }
-import type { UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { UserProfile as _UserProfile, UserRole as _UserRole, CaseWithId as _CaseWithId } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -159,6 +173,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.addCase(arg0);
+            return result;
+        }
+    }
+    async updateCase(arg0: CaseId, arg1: LegalCase): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateCase(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateCase(arg0, arg1);
             return result;
         }
     }
@@ -229,6 +257,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getMyCases();
+            return result;
+        }
+    }
+    async getMyCasesWithId(): Promise<Array<CaseWithId>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMyCasesWithId();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMyCasesWithId();
             return result;
         }
     }

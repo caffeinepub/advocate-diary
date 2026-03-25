@@ -11,6 +11,7 @@ import { IDL } from '@icp-sdk/core/candid';
 export const LegalCase = IDL.Record({
   'status' : IDL.Text,
   'title' : IDL.Text,
+  'underSection' : IDL.Text,
   'clientName' : IDL.Text,
   'clientAddress' : IDL.Text,
   'clientContact' : IDL.Text,
@@ -19,8 +20,13 @@ export const LegalCase = IDL.Record({
   'nextDate' : IDL.Nat,
   'hearingReason' : IDL.Text,
   'partiesName' : IDL.Text,
+  'remarks' : IDL.Text,
 });
 export const CaseId = IDL.Nat;
+export const CaseWithId = IDL.Record({
+  'id' : IDL.Nat,
+  'legalCase' : LegalCase,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -31,11 +37,13 @@ export const UserProfile = IDL.Record({ 'name' : IDL.Text });
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addCase' : IDL.Func([LegalCase], [CaseId], []),
+  'updateCase' : IDL.Func([IDL.Nat, LegalCase], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'deleteCase' : IDL.Func([CaseId], [], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getMyCases' : IDL.Func([], [IDL.Vec(LegalCase)], ['query']),
+  'getMyCasesWithId' : IDL.Func([], [IDL.Vec(CaseWithId)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
@@ -51,6 +59,7 @@ export const idlFactory = ({ IDL }) => {
   const LegalCase = IDL.Record({
     'status' : IDL.Text,
     'title' : IDL.Text,
+    'underSection' : IDL.Text,
     'clientName' : IDL.Text,
     'clientAddress' : IDL.Text,
     'clientContact' : IDL.Text,
@@ -59,8 +68,13 @@ export const idlFactory = ({ IDL }) => {
     'nextDate' : IDL.Nat,
     'hearingReason' : IDL.Text,
     'partiesName' : IDL.Text,
+    'remarks' : IDL.Text,
   });
   const CaseId = IDL.Nat;
+  const CaseWithId = IDL.Record({
+    'id' : IDL.Nat,
+    'legalCase' : LegalCase,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -71,11 +85,13 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addCase' : IDL.Func([LegalCase], [CaseId], []),
+    'updateCase' : IDL.Func([IDL.Nat, LegalCase], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'deleteCase' : IDL.Func([CaseId], [], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getMyCases' : IDL.Func([], [IDL.Vec(LegalCase)], ['query']),
+    'getMyCasesWithId' : IDL.Func([], [IDL.Vec(CaseWithId)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],

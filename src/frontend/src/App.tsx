@@ -45,6 +45,7 @@ export default function App() {
   const isLoggingIn = loginStatus === "logging-in";
 
   const [credentialsVerified, setCredentialsVerified] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [view, setView] = useState<"list" | "calendar">("list");
 
   const principalString = useMemo(
@@ -205,6 +206,13 @@ export default function App() {
     setCredentialsVerified(false);
   };
 
+  const handleCredentialsVerified = () => {
+    setCredentialsVerified(true);
+    setShowWelcome(true);
+    // Auto-dismiss after 3.5 seconds
+    setTimeout(() => setShowWelcome(false), 3500);
+  };
+
   if (isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -229,7 +237,7 @@ export default function App() {
           isLoggingIn={isLoggingIn}
           identity={identity}
           principalString={principalString}
-          onCredentialsVerified={() => setCredentialsVerified(true)}
+          onCredentialsVerified={handleCredentialsVerified}
         />
         <Toaster />
       </>
@@ -246,6 +254,74 @@ export default function App() {
       style={{ maxWidth: "430px", margin: "0 auto" }}
     >
       <Toaster position="top-center" />
+
+      {/* Welcome Popup */}
+      <AnimatePresence>
+        {showWelcome && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/30 z-50"
+              onClick={() => setShowWelcome(false)}
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ type: "spring", damping: 22, stiffness: 300 }}
+              className="fixed inset-0 z-50 flex items-center justify-center px-6 pointer-events-none"
+            >
+              <div
+                className="bg-card rounded-3xl shadow-2xl px-7 py-8 w-full max-w-[320px] pointer-events-auto text-center relative"
+                style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowWelcome(false)}
+                  className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+
+                {/* Icon */}
+                <div
+                  className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                  style={{ background: "oklch(var(--header))" }}
+                >
+                  <Scale className="w-8 h-8 text-white" />
+                </div>
+
+                {/* Greeting */}
+                <p className="text-sm text-muted-foreground mb-1 font-medium">
+                  Welcome back
+                </p>
+                <h2 className="text-lg font-bold text-foreground leading-snug">
+                  Advocate Saiyad Ahammed
+                </h2>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your diary is ready. Have a productive day!
+                </p>
+
+                {/* Progress bar auto-dismiss indicator */}
+                <motion.div className="mt-5 h-1 rounded-full overflow-hidden bg-muted">
+                  <motion.div
+                    initial={{ width: "100%" }}
+                    animate={{ width: "0%" }}
+                    transition={{ duration: 3.5, ease: "linear" }}
+                    className="h-full rounded-full"
+                    style={{ background: "oklch(var(--header))" }}
+                  />
+                </motion.div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Sticky Header */}
       <header
