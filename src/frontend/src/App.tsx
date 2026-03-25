@@ -26,6 +26,13 @@ export default function App() {
   const isLoggedIn = !!identity;
   const isLoggingIn = loginStatus === "logging-in";
 
+  const [credentialsVerified, setCredentialsVerified] = useState(false);
+
+  const principalString = useMemo(
+    () => (identity ? identity.getPrincipal().toString() : ""),
+    [identity],
+  );
+
   const { data: cases = [], isLoading } = useGetMyCases();
   const addCaseMutation = useAddCase();
   const deleteCaseMutation = useDeleteCase();
@@ -126,6 +133,11 @@ export default function App() {
     setDismissedBanners((prev) => new Set([...prev, key]));
   };
 
+  const handleLogout = () => {
+    clear();
+    setCredentialsVerified(false);
+  };
+
   if (isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -142,10 +154,16 @@ export default function App() {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || !credentialsVerified) {
     return (
       <>
-        <LoginScreen onLogin={login} isLoggingIn={isLoggingIn} />
+        <LoginScreen
+          onLogin={login}
+          isLoggingIn={isLoggingIn}
+          identity={identity}
+          principalString={principalString}
+          onCredentialsVerified={() => setCredentialsVerified(true)}
+        />
         <Toaster />
       </>
     );
@@ -180,7 +198,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => clear()}
+            onClick={handleLogout}
             className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
             aria-label="Logout"
             data-ocid="app.secondary_button"

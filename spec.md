@@ -1,25 +1,28 @@
 # Advocate Diary
 
 ## Current State
-New project. No existing application code.
+App uses Internet Identity (blockchain) for authentication. After login, users can manage legal cases. LoginScreen shows a single "Login to Continue" button that triggers Internet Identity.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Case management system for legal advocates
-- Case data model: title, CNR reference number, client name, next court date, court/forum, status
-- Backend: create case, list cases, delete case
-- Dashboard showing all cases as cards with key details
-- Add New Case form (modal/panel) with fields: case title, CNR/ref number, client name, court/forum, next court date (date picker), status
-- Search/filter cases by title, CNR, or client name
-- Navigation header with branding
+- Sign Up page: form with Login ID (username) and Password fields, confirm password field, submit button
+- Login page update: form with Login ID and Password fields instead of just Internet Identity button
+- Backend: store user credentials (loginId + hashed password) per principal
+- Backend: `signUp(loginId, password)` - registers credentials for current principal
+- Backend: `verifyCredentials(loginId, password)` - verifies login ID and password match the principal
+- Backend: `hasCredentials()` - checks if current principal has set up credentials
 
 ### Modify
-N/A
+- LoginScreen: replace single button with a tabbed interface (Login / Sign Up) with login ID + password fields
+- App.tsx: after Internet Identity auth, check if user has credentials; if not, show signup; if yes, show credential login form
 
 ### Remove
-N/A
+- Nothing removed
 
 ## Implementation Plan
-1. Motoko backend: Case type with id, title, refNumber, clientName, court, status, nextDate (Int timestamp). Functions: addCase, getCases, deleteCase.
-2. Frontend: indigo-branded layout with sticky header, case dashboard with case cards grid, Add New Case modal form, search bar to filter cases.
+1. Update backend (main.mo) to add credential storage and verification functions
+2. Update backend.d.ts with new function signatures
+3. Create SignupPage component with login ID, password, confirm password fields
+4. Update LoginScreen to show login ID + password form after Internet Identity auth
+5. Update App.tsx to handle the two-step auth flow (II auth -> credential check -> signup or login)
