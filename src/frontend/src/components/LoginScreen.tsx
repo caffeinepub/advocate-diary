@@ -18,13 +18,11 @@ async function hashPassword(password: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function getCredsKey(principal: string) {
-  return `advocate-diary-creds-${principal}`;
-}
+const CREDS_KEY = "advocate-diary-local-creds";
 
-function loadCreds(principal: string): StoredCreds | null {
+function loadCreds(): StoredCreds | null {
   try {
-    const raw = localStorage.getItem(getCredsKey(principal));
+    const raw = localStorage.getItem(CREDS_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as StoredCreds;
   } catch {
@@ -32,33 +30,24 @@ function loadCreds(principal: string): StoredCreds | null {
   }
 }
 
-function saveCreds(principal: string, creds: StoredCreds) {
-  localStorage.setItem(getCredsKey(principal), JSON.stringify(creds));
+function saveCreds(creds: StoredCreds) {
+  localStorage.setItem(CREDS_KEY, JSON.stringify(creds));
 }
 
-function clearCreds(principal: string) {
-  localStorage.removeItem(getCredsKey(principal));
+function clearCreds() {
+  localStorage.removeItem(CREDS_KEY);
 }
 
-type Screen = "connecting" | "signup" | "login";
+type Screen = "signup" | "login";
 
 interface LoginScreenProps {
-  onLogin: () => void;
-  isLoggingIn: boolean;
-  identity: any | null;
-  principalString: string;
   onCredentialsVerified: () => void;
 }
 
 export default function LoginScreen({
-  onLogin,
-  isLoggingIn,
-  identity,
-  principalString,
   onCredentialsVerified,
 }: LoginScreenProps) {
-  const [screen, setScreen] = useState<Screen>("connecting");
-  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
+  const [screen, setScreen] = useState<Screen | null>(null);
 
   // Sign Up state
   const [signupId, setSignupId] = useState("");
@@ -76,25 +65,16 @@ export default function LoginScreen({
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Auto-trigger Internet Identity on mount
+  // Determine which screen to show on mount
   useEffect(() => {
-    if (!autoLoginAttempted && !identity) {
-      setAutoLoginAttempted(true);
-      onLogin();
-    }
-  }, [autoLoginAttempted, identity, onLogin]);
-
-  // When identity resolves, determine screen
-  useEffect(() => {
-    if (!identity) return;
-    const creds = loadCreds(principalString);
+    const creds = loadCreds();
     if (creds) {
       setLoginId(creds.loginId);
       setScreen("login");
     } else {
       setScreen("signup");
     }
-  }, [identity, principalString]);
+  }, []);
 
   const validateSignup = () => {
     const errs: Record<string, string> = {};
@@ -120,7 +100,7 @@ export default function LoginScreen({
     }
     setSignupLoading(true);
     const passwordHash = await hashPassword(signupPass);
-    saveCreds(principalString, { loginId: signupId, passwordHash });
+    saveCreds({ loginId: signupId, passwordHash });
     setSignupLoading(false);
     onCredentialsVerified();
   };
@@ -132,7 +112,7 @@ export default function LoginScreen({
       return;
     }
     setLoginLoading(true);
-    const stored = loadCreds(principalString);
+    const stored = loadCreds();
     if (!stored) {
       setLoginError("No account found. Please sign up.");
       setLoginLoading(false);
@@ -149,16 +129,21 @@ export default function LoginScreen({
   };
 
   const handleForgotPassword = () => {
-    clearCreds(principalString);
+    clearCreds();
     setLoginId("");
     setLoginPass("");
     setLoginError("");
     setScreen("signup");
   };
 
-  const handleRetry = () => {
-    setAutoLoginAttempted(false);
-  };
+  // Show loading briefly while detecting which screen to show
+  if (!screen) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -194,40 +179,6 @@ export default function LoginScreen({
         style={{ minHeight: "280px" }}
       >
         <AnimatePresence mode="wait">
-          {/* Connecting state */}
-          {screen === "connecting" && (
-            <motion.div
-              key="connecting"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-              className="flex flex-col items-center justify-center py-8 gap-4"
-            >
-              {isLoggingIn ? (
-                <>
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">
-                    Connecting securely...
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground text-center">
-                    Authentication window was closed. Please try again.
-                  </p>
-                  <Button
-                    onClick={handleRetry}
-                    className="h-12 px-6 rounded-2xl"
-                    data-ocid="login.primary_button"
-                  >
-                    Try Again
-                  </Button>
-                </>
-              )}
-            </motion.div>
-          )}
-
           {/* Sign Up */}
           {screen === "signup" && (
             <motion.div
@@ -389,7 +340,7 @@ export default function LoginScreen({
                   Welcome Back
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Enter your credentials to continue
+                  Enter your password to continue
                 </p>
               </div>
 

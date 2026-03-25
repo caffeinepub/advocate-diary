@@ -39,19 +39,11 @@ function isTomorrow(dateMs: number): boolean {
 }
 
 export default function App() {
-  const { login, clear, loginStatus, identity, isInitializing } =
-    useInternetIdentity();
-  const isLoggedIn = !!identity;
-  const isLoggingIn = loginStatus === "logging-in";
+  const { login, clear, identity, isInitializing } = useInternetIdentity();
 
   const [credentialsVerified, setCredentialsVerified] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [view, setView] = useState<"list" | "calendar">("list");
-
-  const principalString = useMemo(
-    () => (identity ? identity.getPrincipal().toString() : ""),
-    [identity],
-  );
 
   const { data: cases = [], isLoading } = useGetMyCases();
   const addCaseMutation = useAddCase();
@@ -68,6 +60,13 @@ export default function App() {
   const notifiedIds = useRef<Set<string>>(new Set());
   const notifTimeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // After local credentials are verified, silently connect to backend (no popup for existing sessions)
+  useEffect(() => {
+    if (credentialsVerified && !identity && !isInitializing) {
+      login();
+    }
+  }, [credentialsVerified, identity, isInitializing, login]);
+
   const filteredCases = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return cases;
@@ -80,7 +79,7 @@ export default function App() {
   }, [cases, searchQuery]);
 
   const initials = useMemo(() => {
-    if (!identity) return "U";
+    if (!identity) return "SA";
     const principal = identity.getPrincipal().toString();
     return principal.slice(0, 2).toUpperCase();
   }, [identity]);
@@ -91,7 +90,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (!isLoggedIn || cases.length === 0) return;
+    if (!credentialsVerified || cases.length === 0) return;
 
     const sendNotifications = async () => {
       if (!("Notification" in window)) return;
@@ -133,7 +132,7 @@ export default function App() {
       }
       notifTimeouts.current = [];
     };
-  }, [cases, isLoggedIn]);
+  }, [cases, credentialsVerified]);
 
   const handleAddCase = async (data: CaseFormData) => {
     try {
@@ -209,7 +208,6 @@ export default function App() {
   const handleCredentialsVerified = () => {
     setCredentialsVerified(true);
     setShowWelcome(true);
-    // Auto-dismiss after 3.5 seconds
     setTimeout(() => setShowWelcome(false), 3500);
   };
 
@@ -229,16 +227,10 @@ export default function App() {
     );
   }
 
-  if (!isLoggedIn || !credentialsVerified) {
+  if (!credentialsVerified) {
     return (
       <>
-        <LoginScreen
-          onLogin={login}
-          isLoggingIn={isLoggingIn}
-          identity={identity}
-          principalString={principalString}
-          onCredentialsVerified={handleCredentialsVerified}
-        />
+        <LoginScreen onCredentialsVerified={handleCredentialsVerified} />
         <Toaster />
       </>
     );
